@@ -1,0 +1,67 @@
+---
+- name: olam demo install
+  hosts: olam-server
+  become: true
+# vars:
+#   ansible_python_interpreter: /usr/bin/python3.6
+  tasks:
+  - name: set required repository
+    dnf:
+      enablerepo: "{{ item }}"
+      state: present
+    with_items:
+      - ol8_baseos_latest
+      - ol8_x86_64_automation2
+      - ol8_x86_64_addons
+      - ol8_x86_64_baseos_latest
+      - ol8_x86_64_UEKR6 
+      - ol8_x86_64_appstream
+
+  - name: run firewalld
+    service:
+      name: firewalld
+      state: started
+
+  - name: firewalld rules
+    ansible.posix.firewalld:  # this works only with python3.6
+      service: "{{ item }}" 
+      state: enabled
+      permanent: true
+      immediate: true
+    with_items:
+      - http
+      - https
+
+  - name: install postgres 
+    dnf:
+      name: "@postgresql:13"
+      state: present
+
+  - name: check if postgres is initialized
+    ansible.builtin.stat:
+      path: "/var/lib/pgsql/data/pg_hba.conf"
+    register: postgres_data
+
+  - name: initialize postgresql
+    shell: "postgresql-setup initdb"
+    when: not postgres_data.stat.exists
+
+  - name: secure postgres traffic
+    lineinfile:
+      path: /var/lib/pgsql/data/postgresql.conf
+      regex: '#password_encryption.*'
+      line: 'password_encryption = scram-sha-256'
+    notify:
+      - restart postgres
+
+  - name: create awx user
+    shell: postgres -c "createuser -S -P awx"
+
+  - name: start postgresql
+    service: "name={{ item }} state=started enabled=yes"
+    with_items:
+      - postgresql
+
+  handlers:
+  - name: restart postgres
+    service: name=postgresql state=restarted
