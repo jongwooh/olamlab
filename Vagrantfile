@@ -22,7 +22,7 @@
 VAGRANTFILE_API_VERSION = "2"
 
 # Box metadata location and box name
-BOX_URL = "https://oracle.github.io/vagrant-projects/boxes"
+BOX_URL = "oraclelinux/8 https://oracle.github.io/vagrant-projects/boxes/oraclelinux/8.json"
 BOX_NAME = "oraclelinux/8"
 
 # define hostname
@@ -92,6 +92,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.define hostname do |cfg|
       cfg.vm.provider :virtualbox do |vb, override|
         config.vm.box = BOX_NAME
+        config.vm.box_url = BOX_URL
         #config.ssh.username = "oracle"
         #config.ssh.private_key_path = "./vagrant-key"
         override.vm.network :private_network, ip: "#{info[:ip]}"
